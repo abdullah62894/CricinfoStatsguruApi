@@ -1,0 +1,12 @@
+.dotnet/
+.nuget/
+.templateengine/
+**/Data/cache.db
+**/Data/cache.db-shm
+**/Data/cache.db-wal
+
+**/bin/
+**/obj/
+
+.vs/
+.vscode/

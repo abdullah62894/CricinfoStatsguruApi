@@ -1,0 +1,6 @@
+@CricinfoStatsguruApi_HostAddress = http://localhost:5137
+
+GET {{CricinfoStatsguruApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

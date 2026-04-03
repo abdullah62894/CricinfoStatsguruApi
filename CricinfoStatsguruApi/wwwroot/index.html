@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Cricinfo Player Profiles</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <main class="page-shell">
+        <section class="hero">
+            <div class="hero-copy">
+                <p class="eyebrow">Cricinfo Statsguru Profiles</p>
+                <h1>See player profiles in a clean, highlighted view</h1>
+                <p class="hero-text">
+                    Search a batter or bowler, choose a template, and compare player average, team average,
+                    opposition average, top-7 numbers, SENA splits, and pace-spin splits without reading raw JSON.
+                </p>
+            </div>
+            <a class="swagger-link" href="/swagger" target="_blank" rel="noreferrer">Open Swagger</a>
+        </section>
+
+        <section class="panel search-panel">
+            <form id="profile-form" class="profile-form">
+                <label>
+                    <span>Player name</span>
+                    <input id="playerName" name="playerName" type="text" value="" placeholder="Enter player name" required>
+                </label>
+
+                <input id="selectedPlayerId" name="selectedPlayerId" type="hidden">
+
+                <label>
+                    <span>Template</span>
+                    <select id="templateKey" name="templateKey"></select>
+                </label>
+
+                <label>
+                    <span>Bowler type</span>
+                    <select id="bowlerType" name="bowlerType">
+                        <option value="">Auto (All)</option>
+                        <option value="1">Pacer</option>
+                        <option value="2">Spinner</option>
+                    </select>
+                </label>
+
+                <label>
+                    <span>Host group (SENA)</span>
+                    <select id="hostGroup" name="hostGroup">
+                        <option value="SENA">SENA (AUS, ENG, NZ, SA)</option>
+                        <option value="SENAI">SENAI (+ India)</option>
+                        <option value="SWENA">SWENA (+ West Indies)</option>
+                    </select>
+                </label>
+
+                <button type="submit" id="submitButton">Load profile</button>
+            </form>
+            <p id="form-status" class="form-status">Loading templates...</p>
+            <div id="player-picker-panel" class="player-picker hidden">
+                <label>
+                    <span>Pick the exact Statsguru player</span>
+                    <select id="playerCandidateSelect">
+                        <option value="">Choose a player</option>
+                    </select>
+                </label>
+                <p id="player-picker-note" class="form-status"></p>
+            </div>
+        </section>
+
+        <section id="summary-panel" class="panel summary-panel hidden">
+            <div class="summary-header">
+                <div>
+                    <p class="eyebrow">Profile snapshot</p>
+                    <h2 id="profile-title">Player Profile</h2>
+                    <p id="profile-subtitle" class="profile-subtitle"></p>
+                </div>
+                <div class="summary-links">
+                    <a id="raw-api-link" href="#" target="_blank" rel="noreferrer">Open JSON</a>
+                </div>
+            </div>
+            <div id="highlight-grid" class="highlight-grid"></div>
+        </section>
+
+        <section id="hammyviz-panel" class="panel hidden">
+            <div class="section-heading">
+                <p class="eyebrow">HammyViz</p>
+                <h2>Breakdown</h2>
+            </div>
+            <div id="hammyviz-summary" class="compare-summary"></div>
+            <p id="hammyviz-formula" class="metric-subtext"></p>
+            <div id="hammyviz-breakdown" class="hammyviz-breakdown"></div>
+        </section>
+
+        <section id="comparison-panel" class="panel hidden">
+            <div class="section-heading">
+                <p class="eyebrow">Comparison blocks</p>
+                <h2>Detailed profile cards</h2>
+            </div>
+            <div id="comparison-grid" class="comparison-grid"></div>
+        </section>
+
+        <section id="notes-panel" class="panel hidden">
+            <div class="section-heading">
+                <p class="eyebrow">Notes</p>
+                <h2>Important context</h2>
+            </div>
+            <div id="notes-list" class="notes-list"></div>
+        </section>
+
+        <section class="panel compare-panel">
+            <div class="section-heading">
+                <p class="eyebrow">Compare Players</p>
+                <h2>Side-by-side HammyViz view</h2>
+            </div>
+            <form id="compare-form" class="compare-form">
+                <input id="comparePlayerASelectedId" type="hidden">
+                <input id="comparePlayerBSelectedId" type="hidden">
+
+                <label>
+                    <span>Player A</span>
+                    <input id="comparePlayerAName" type="text" value="" placeholder="Enter player A" required>
+                </label>
+
+                <label>
+                    <span>Player B</span>
+                    <input id="comparePlayerBName" type="text" value="" placeholder="Enter player B" required>
+                </label>
+
+                <label>
+                    <span>Template</span>
+                    <select id="compareTemplateKey"></select>
+                </label>
+
+                <label>
+                    <span>Bowler type</span>
+                    <select id="compareBowlerType" name="bowlerType">
+                        <option value="">Auto (All)</option>
+                        <option value="1">Pacer</option>
+                        <option value="2">Spinner</option>
+                    </select>
+                </label>
+
+                <label>
+                    <span>Host group (SENA)</span>
+                    <select id="compareHostGroup" name="hostGroup">
+                        <option value="SENA">SENA (AUS, ENG, NZ, SA)</option>
+                        <option value="SENAI">SENAI (+ India)</option>
+                        <option value="SWENA">SWENA (+ West Indies)</option>
+                    </select>
+                </label>
+
+                <button type="submit" id="compareSubmitButton">Compare players</button>
+            </form>
+
+            <div id="compare-player-a-picker" class="player-picker hidden">
+                <label>
+                    <span>Pick Player A</span>
+                    <select id="comparePlayerASelect">
+                        <option value="">Choose a player</option>
+                    </select>
+                </label>
+                <p id="comparePlayerANote" class="form-status"></p>
+            </div>
+
+            <div id="compare-player-b-picker" class="player-picker hidden">
+                <label>
+                    <span>Pick Player B</span>
+                    <select id="comparePlayerBSelect">
+                        <option value="">Choose a player</option>
+                    </select>
+                </label>
+                <p id="comparePlayerBNote" class="form-status"></p>
+            </div>
+
+            <p id="compare-status" class="form-status">Choose two players to compare.</p>
+            <div id="compare-summary" class="compare-summary hidden"></div>
+            <div id="compare-results" class="compare-results hidden"></div>
+        </section>
+
+        <section class="panel rankings-panel">
+            <div class="section-heading">
+                <p class="eyebrow">HammyViz Rankings</p>
+                <h2>Top players by HammyViz</h2>
+            </div>
+            <form id="rankings-form" class="compare-form">
+                <label>
+                    <span>Template</span>
+                    <select id="rankingsTemplateKey"></select>
+                </label>
+
+                <label>
+                    <span>Limit</span>
+                    <input id="rankingsLimit" type="number" value="10" min="1" max="100">
+                </label>
+
+                <label>
+                    <span>Host group</span>
+                    <select id="rankingsHostGroup" name="hostGroup">
+                        <option value="SENA">SENA</option>
+                        <option value="SENAI">SENAI</option>
+                        <option value="SWENA">SWENA</option>
+                    </select>
+                </label>
+
+                <div class="rankings-actions">
+                    <button type="button" id="top10Button">Top 10</button>
+                    <button type="button" id="top20Button">Top 20</button>
+                </div>
+
+                <button type="submit" id="rankingsSubmitButton">Load rankings</button>
+            </form>
+            <p id="rankings-status" class="form-status">Load top HammyViz rankings up to 100 players.</p>
+            <div class="summary-links">
+                <a id="exportRankingsButton" href="#" download="hammyviz-rankings.csv">Export CSV</a>
+            </div>
+            <div id="rankings-results" class="compare-results hidden"></div>
+        </section>
+    </main>
+
+    <script src="/app.js" defer></script>
+</body>
+</html>
