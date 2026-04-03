@@ -452,7 +452,7 @@ const applyTemplateHints = () => {
     const isBowling = selected.toLowerCase().includes("bowling");
     playerNameInput.placeholder = isBowling ? "Enter bowler name" : "Enter batter name";
     
-    const bowlerTypeLabel = document.getElementById("bowlerType").closest("label");
+    const bowlerTypeLabel = document.getElementById("bowlerType")?.closest("label");
     if (bowlerTypeLabel) {
         if (isBowling) {
             bowlerTypeLabel.classList.remove("hidden");
@@ -466,7 +466,21 @@ const applyCompareTemplateHints = () => {
     const selected = compareTemplateSelect.options[compareTemplateSelect.selectedIndex]?.value ?? "";
     const isBowling = selected.toLowerCase().includes("bowling");
     
-    const bowlerTypeLabel = document.getElementById("compareBowlerType").closest("label");
+    const bowlerTypeLabel = document.getElementById("compareBowlerType")?.closest("label");
+    if (bowlerTypeLabel) {
+        if (isBowling) {
+            bowlerTypeLabel.classList.remove("hidden");
+        } else {
+            bowlerTypeLabel.classList.add("hidden");
+        }
+    }
+};
+
+const applyRankingsTemplateHints = () => {
+    const selected = rankingsTemplateSelect.options[rankingsTemplateSelect.selectedIndex]?.value ?? "";
+    const isBowling = selected.toLowerCase().includes("bowling");
+    
+    const bowlerTypeLabel = document.getElementById("rankingsBowlerType")?.closest("label");
     if (bowlerTypeLabel) {
         if (isBowling) {
             bowlerTypeLabel.classList.remove("hidden");
@@ -843,6 +857,7 @@ playerCandidateSelect.addEventListener("change", () => {
     });
 
 templateSelect.addEventListener("change", applyTemplateHints);
+rankingsTemplateSelect.addEventListener("change", applyRankingsTemplateHints);
 compareTemplateSelect.addEventListener("change", () => {
     resetCompareSelection("A");
     resetCompareSelection("B");
@@ -871,11 +886,18 @@ rankingsForm.addEventListener("submit", async (event) => {
         const rankingsHostGroupSelect = document.getElementById("rankingsHostGroup");
         const rankingsHostGroup = rankingsHostGroupSelect?.value || "SENA";
 
+        const rankingsBowlerTypeSelect = document.getElementById("rankingsBowlerType");
+        const rankingsBowlerType = rankingsBowlerTypeSelect?.value || "";
+
         const params = new URLSearchParams({
             templateKey: rankingsTemplateSelect.value,
             limit: String(limit),
             hostGroup: rankingsHostGroup
         });
+
+        if (rankingsBowlerType) {
+            params.set("bowlerType", rankingsBowlerType);
+        }
 
         const response = await fetch(`/rankings/hammyviz?${params.toString()}`);
         const data = await response.json();
@@ -917,6 +939,7 @@ window.addEventListener("DOMContentLoaded", async () => {
         await loadTemplates();
         applyTemplateHints();
         applyCompareTemplateHints();
+        applyRankingsTemplateHints();
     } catch (error) {
         showError(error.message || "Unable to initialize the page.");
     }

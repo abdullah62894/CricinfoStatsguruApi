@@ -91,12 +91,13 @@ app.MapGet("/rankings/hammyviz", async (
     string templateKey,
     int? limit,
     string? hostGroup,
+    string? bowlerType,
     ICacheWarmupService cacheWarmupService,
     CancellationToken cancellationToken) =>
 {
     try
     {
-        var result = await cacheWarmupService.GetHammyVizRankingsAsync(templateKey, limit ?? 10, hostGroup, cancellationToken);
+        var result = await cacheWarmupService.GetHammyVizRankingsAsync(templateKey, limit ?? 10, hostGroup, bowlerType, cancellationToken);
         return Results.Ok(result);
     }
     catch (KeyNotFoundException exception)

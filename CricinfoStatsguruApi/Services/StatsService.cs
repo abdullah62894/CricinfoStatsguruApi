@@ -575,45 +575,16 @@ public sealed class StatsService(
         IReadOnlyList<QueryFilter>? extraFilters,
         CancellationToken cancellationToken)
     {
-        var scenarios = new List<StatsScenarioResult>();
+        var mergedFilters = hostIds
+            .Select(hostId => new QueryFilter { Key = "host", Value = hostId.ToString() })
+            .ToList();
 
-        foreach (var hostId in hostIds)
+        if (extraFilters is not null)
         {
-            var mergedFilters = new List<QueryFilter>
-            {
-                new() { Key = "host", Value = hostId.ToString() }
-            };
-
-            if (extraFilters is not null)
-            {
-                foreach (var pair in extraFilters)
-                {
-                    mergedFilters.Add(new QueryFilter { Key = pair.Key, Value = pair.Value });
-                }
-            }
-
-            scenarios.Add(await FetchScenarioAsync(template, query, resolvedPlayer.PlayerId, mergedFilters, cancellationToken));
+            mergedFilters.AddRange(extraFilters);
         }
 
-        return new StatsScenarioResult
-        {
-            SourceLinks = new StatsSourceLinks
-            {
-                SearchUrl = scenarios.First().SourceLinks.SearchUrl,
-                OverallUrl = string.Join(" | ", scenarios.Select(scenario => scenario.SourceLinks.OverallUrl)),
-                IndividualUrl = string.Join(" | ", scenarios.Select(scenario => scenario.SourceLinks.IndividualUrl))
-            },
-            OverallTable = new StatsTable
-            {
-                Headers = scenarios.First().OverallTable.Headers,
-                Rows = scenarios.Select(scenario => GetAggregateRow(template, scenario)).Where(row => row is not null).Cast<IReadOnlyDictionary<string, string>>().ToList()
-            },
-            IndividualTable = new StatsTable
-            {
-                Headers = scenarios.First().IndividualTable.Headers,
-                Rows = scenarios.Select(scenario => FindPlayerRow(scenario.IndividualTable, resolvedPlayer)).Where(row => row is not null).Cast<IReadOnlyDictionary<string, string>>().ToList()
-            }
-        };
+        return await FetchScenarioAsync(template, query, resolvedPlayer.PlayerId, mergedFilters, cancellationToken);
     }
 
     private static string BuildCacheKey(FilterTemplate template, string playerName) =>

@@ -21,25 +21,25 @@
     "lookupKey": "Test:Batting:sr tendulkar (ind)",
     "playerId": 35320,
     "displayName": "SR Tendulkar (IND)",
-    "cachedAtUtc": "2026-04-03T03:57:08.6004318+00:00"
+    "cachedAtUtc": "2026-04-03T05:05:50.5380723+00:00"
   },
   "Test:Bowling:cummins": {
     "lookupKey": "Test:Bowling:cummins",
     "playerId": 64244,
     "displayName": "PJ Cummins (AUS)",
-    "cachedAtUtc": "2026-04-02T12:08:48.1165403+00:00"
+    "cachedAtUtc": "2026-04-03T05:05:22.911324+00:00"
   },
   "Test:Batting:je root (eng)": {
     "lookupKey": "Test:Batting:je root (eng)",
     "playerId": 303669,
     "displayName": "JE Root (ENG)",
-    "cachedAtUtc": "2026-04-03T03:57:08.6150348+00:00"
+    "cachedAtUtc": "2026-04-03T05:05:50.5500107+00:00"
   },
   "Test:Batting:rt ponting (aus)": {
     "lookupKey": "Test:Batting:rt ponting (aus)",
     "playerId": 7133,
     "displayName": "RT Ponting (AUS)",
-    "cachedAtUtc": "2026-04-03T03:57:08.6294894+00:00"
+    "cachedAtUtc": "2026-04-03T05:05:50.5606643+00:00"
   },
   "Test:Batting:cummins": {
     "lookupKey": "Test:Batting:cummins",
@@ -51,19 +51,19 @@
     "lookupKey": "Test:Batting:jh kallis (icc/sa)",
     "playerId": 45789,
     "displayName": "JH Kallis (ICC/SA)",
-    "cachedAtUtc": "2026-04-03T03:57:08.6417093+00:00"
+    "cachedAtUtc": "2026-04-03T05:05:50.5758886+00:00"
   },
   "Test:Batting:r dravid (icc/ind)": {
     "lookupKey": "Test:Batting:r dravid (icc/ind)",
     "playerId": 28114,
     "displayName": "R Dravid (ICC/IND)",
-    "cachedAtUtc": "2026-04-03T03:57:08.6558357+00:00"
+    "cachedAtUtc": "2026-04-03T05:05:50.5903195+00:00"
   },
   "Test:Batting:an cook (eng)": {
     "lookupKey": "Test:Batting:an cook (eng)",
     "playerId": 11728,
     "displayName": "AN Cook (ENG)",
-    "cachedAtUtc": "2026-04-03T03:57:08.6711401+00:00"
+    "cachedAtUtc": "2026-04-03T05:05:50.6054242+00:00"
   },
   "Test:Batting:bumrah": {
     "lookupKey": "Test:Batting:bumrah",
@@ -75,31 +75,31 @@
     "lookupKey": "Test:Batting:kc sangakkara (sl)",
     "playerId": 50710,
     "displayName": "KC Sangakkara (SL)",
-    "cachedAtUtc": "2026-04-03T03:57:08.6849473+00:00"
+    "cachedAtUtc": "2026-04-03T05:05:50.6192009+00:00"
   },
   "Test:Batting:bc lara (icc/wi)": {
     "lookupKey": "Test:Batting:bc lara (icc/wi)",
     "playerId": 52337,
     "displayName": "BC Lara (ICC/WI)",
-    "cachedAtUtc": "2026-04-03T03:57:08.700222+00:00"
+    "cachedAtUtc": "2026-04-03T05:05:50.6350424+00:00"
   },
   "Test:Batting:s chanderpaul (wi)": {
     "lookupKey": "Test:Batting:s chanderpaul (wi)",
     "playerId": 51469,
     "displayName": "S Chanderpaul (WI)",
-    "cachedAtUtc": "2026-04-03T03:57:08.7152624+00:00"
+    "cachedAtUtc": "2026-04-03T05:05:50.6487073+00:00"
   },
   "Test:Batting:dpmd jayawardene (sl)": {
     "lookupKey": "Test:Batting:dpmd jayawardene (sl)",
     "playerId": 49289,
     "displayName": "DPMD Jayawardene (SL)",
-    "cachedAtUtc": "2026-04-03T03:57:08.7299909+00:00"
+    "cachedAtUtc": "2026-04-03T05:05:50.6729841+00:00"
   },
   "Test:Bowling:bumrah": {
     "lookupKey": "Test:Bowling:bumrah",
     "playerId": 70640,
     "displayName": "JJ Bumrah (IND)",
-    "cachedAtUtc": "2026-04-02T12:08:48.0981648+00:00"
+    "cachedAtUtc": "2026-04-03T05:05:22.8922031+00:00"
   },
   "Test:Batting:sachin": {
     "lookupKey": "Test:Batting:sachin",
@@ -172,5 +172,29 @@
     "playerId": 253802,
     "displayName": "V Kohli (IND)",
     "cachedAtUtc": "2026-04-03T03:55:46.866614+00:00"
+  },
+  "Test:Batting:babar azam": {
+    "lookupKey": "Test:Batting:babar azam",
+    "playerId": 56880,
+    "displayName": "Babar Azam (PAK)",
+    "cachedAtUtc": "2026-04-03T04:36:38.4671198+00:00"
+  },
+  "Test:Batting:kane williamson": {
+    "lookupKey": "Test:Batting:kane williamson",
+    "playerId": 51088,
+    "displayName": "KS Williamson (NZ)",
+    "cachedAtUtc": "2026-04-03T04:42:10.9165613+00:00"
+  },
+  "Test:Batting:je root": {
+    "lookupKey": "Test:Batting:je root",
+    "playerId": 52656,
+    "displayName": "JE Root (ENG)",
+    "cachedAtUtc": "2026-04-03T04:48:20.0935359+00:00"
+  },
+  "Test:Batting:kohli": {
+    "lookupKey": "Test:Batting:kohli",
+    "playerId": 49752,
+    "displayName": "V Kohli (IND)",
+    "cachedAtUtc": "2026-04-03T05:03:34.6961787+00:00"
   }
 }

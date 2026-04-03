@@ -89,7 +89,7 @@ public sealed class CacheWarmupService(
         };
     }
 
-    public async Task<HammyVizRankingResponse> GetHammyVizRankingsAsync(string templateKey, int limit, string? hostGroup, CancellationToken cancellationToken)
+    public async Task<HammyVizRankingResponse> GetHammyVizRankingsAsync(string templateKey, int limit, string? hostGroup, string? bowlerType, CancellationToken cancellationToken)
     {
         if (limit <= 0 || limit > 100)
         {
@@ -114,15 +114,24 @@ public sealed class CacheWarmupService(
         var profiles = new List<PlayerProfileResponse>();
         foreach (var row in snapshot.Rows.Take(limit))
         {
-            var query = new StatsQuery
+            try
             {
-                PlayerName = row.DisplayName,
-                SelectedPlayerId = row.PlayerId,
-                TemplateKey = template.Key,
-                HostGroup = hostGroup
-            };
+                var query = new StatsQuery
+                {
+                    PlayerName = row.DisplayName,
+                    SelectedPlayerId = row.PlayerId,
+                    TemplateKey = template.Key,
+                    HostGroup = hostGroup,
+                    BowlerType = bowlerType
+                };
 
-            profiles.Add(await _statsService.GetPlayerProfileAsync(query, cancellationToken));
+                profiles.Add(await _statsService.GetPlayerProfileAsync(query, cancellationToken));
+            }
+            catch (Exception)
+            {
+                // If a specific profile fails to load from Statsguru, skip it for the rankings
+                // but continue building the rest of the list.
+            }
         }
 
         var ranked = profiles
