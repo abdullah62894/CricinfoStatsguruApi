@@ -171,8 +171,18 @@ public sealed partial class StatsguruHtmlParser : IStatsguruHtmlParser
             header is "Mat" or "Inns" or "Runs" or "Ave" or "SR" or "Wkts" or "Bowl Ave" or "Span")
             ? 500
             : 0;
+        var playerHeaderBonus = table.Headers.Any(header =>
+            string.Equals(header, "Player", StringComparison.OrdinalIgnoreCase))
+            ? 1200
+            : 0;
+        var playerIdBonus = table.Rows.Any(row => row.ContainsKey("PlayerId")) ? 2000 : 0;
+        var paginationPenalty = table.Rows.Any(row =>
+            row.Values.Any(value => value.Contains("Page 1 of", StringComparison.OrdinalIgnoreCase)) &&
+            row.Values.Any(value => value.Contains("Showing", StringComparison.OrdinalIgnoreCase)))
+            ? -1800
+            : 0;
 
-        return engineTableBonus + meaningfulHeaderBonus + headerScore + rowScore;
+        return engineTableBonus + meaningfulHeaderBonus + playerHeaderBonus + playerIdBonus + paginationPenalty + headerScore + rowScore;
     }
 
     private static List<string> BuildEffectiveHeaders(List<string> headers, int cellCount)

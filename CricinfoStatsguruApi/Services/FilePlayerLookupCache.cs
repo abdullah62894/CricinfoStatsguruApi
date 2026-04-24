@@ -59,6 +59,22 @@ public sealed class FilePlayerLookupCache(IHostEnvironment hostEnvironment) : IP
         }
     }
 
+    public async Task ClearAsync(CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            if (File.Exists(_cacheFilePath))
+            {
+                File.Delete(_cacheFilePath);
+            }
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
     private async Task<Dictionary<string, PlayerIdCacheEntry>> ReadAllUnsafeAsync(CancellationToken cancellationToken)
     {
         if (!File.Exists(_cacheFilePath))

@@ -19,4 +19,6 @@ public interface IStatsCacheRepository
     Task<LeaderboardSnapshotMetadata?> TryGetLatestLeaderboardSnapshotAsync(string format, string discipline, CancellationToken cancellationToken);
 
     Task SaveLeaderboardSnapshotAsync(string snapshotKey, string format, string discipline, IReadOnlyList<LeaderboardSnapshotRow> rows, DateTimeOffset capturedUtc, CancellationToken cancellationToken);
+
+    Task ResetAllAsync(CancellationToken cancellationToken);
 }

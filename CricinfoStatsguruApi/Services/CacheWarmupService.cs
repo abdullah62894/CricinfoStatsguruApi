@@ -66,7 +66,6 @@ public sealed class CacheWarmupService(
             var query = new StatsQuery
             {
                 PlayerName = changedRow.DisplayName,
-                SelectedPlayerId = changedRow.PlayerId,
                 TemplateKey = template.Key,
                 ForceRefresh = true
             };
@@ -119,13 +118,27 @@ public sealed class CacheWarmupService(
                 var query = new StatsQuery
                 {
                     PlayerName = row.DisplayName,
-                    SelectedPlayerId = row.PlayerId,
                     TemplateKey = template.Key,
                     HostGroup = hostGroup,
                     BowlerType = bowlerType
                 };
 
-                profiles.Add(await _statsService.GetPlayerProfileAsync(query, cancellationToken));
+                var profile = await _statsService.GetPlayerProfileAsync(query, cancellationToken);
+                if (NeedsRankingRefresh(profile))
+                {
+                    profile = await _statsService.GetPlayerProfileAsync(
+                        new StatsQuery
+                        {
+                            PlayerName = row.DisplayName,
+                            TemplateKey = template.Key,
+                            HostGroup = hostGroup,
+                            BowlerType = bowlerType,
+                            ForceRefresh = true
+                        },
+                        cancellationToken);
+                }
+
+                profiles.Add(profile);
             }
             catch (Exception)
             {
@@ -289,4 +302,8 @@ public sealed class CacheWarmupService(
 
     private static decimal? FindDelta(PlayerProfileResponse profile, string key) =>
         profile.Comparisons.FirstOrDefault(comparison => string.Equals(comparison.Key, key, StringComparison.OrdinalIgnoreCase))?.Metrics.AverageDelta;
+
+    private static bool NeedsRankingRefresh(PlayerProfileResponse profile) =>
+        profile.HammyVizScore is null ||
+        !profile.Comparisons.Any(comparison => string.Equals(comparison.Key, "player-overall", StringComparison.OrdinalIgnoreCase));
 }

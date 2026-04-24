@@ -39,7 +39,13 @@ public static class TeamResolver
         }
 
         var code = displayName[(openIndex + 1)..closeIndex].Trim();
-        return Teams.TryGetValue(code, out var team) ? team : null;
+        if (Teams.TryGetValue(code, out var team))
+        {
+            return team;
+        }
+
+        var normalizedCode = code.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).LastOrDefault();
+        return normalizedCode is not null && Teams.TryGetValue(normalizedCode, out team) ? team : null;
     }
 
     public static IReadOnlyList<int> GetOppositionTeamIds(int ownTeamId) =>

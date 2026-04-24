@@ -105,10 +105,35 @@ button:hover {
     padding: 1.5rem;
 }
 
+.summary-panel {
+    background:
+        radial-gradient(circle at top right, rgba(18, 102, 79, 0.1), transparent 18rem),
+        linear-gradient(180deg, rgba(255, 252, 245, 0.98), rgba(247, 241, 228, 0.98));
+}
+
+.section-heading,
+.summary-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.section-heading {
+    margin-bottom: 1rem;
+}
+
 .profile-form {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 1rem;
+}
+
+.cache-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    flex-wrap: wrap;
 }
 
 .compare-form {
@@ -151,6 +176,18 @@ button {
     cursor: pointer;
 }
 
+.secondary-button {
+    background: #fffdf8;
+    color: var(--ink);
+    border: 1px solid var(--border);
+    cursor: pointer;
+}
+
+.danger-button {
+    color: #8c2f16;
+    border-color: rgba(140, 47, 22, 0.22);
+}
+
 .form-status {
     margin: 1rem 0 0;
 }
@@ -180,21 +217,48 @@ button {
     font: inherit;
 }
 
-.summary-header {
-    display: flex;
-    justify-content: space-between;
-    gap: 1rem;
-    align-items: flex-start;
-}
-
 .highlight-grid,
 .comparison-grid,
 .notes-list,
 .compare-summary,
-.hammyviz-breakdown {
+.hammyviz-breakdown,
+.top-summary-rows {
     display: grid;
     gap: 1rem;
     margin-top: 1.25rem;
+}
+
+.top-summary-rows {
+    grid-template-columns: 1fr;
+}
+
+.top-summary-row {
+    display: grid;
+    grid-template-columns: minmax(220px, 320px) 1fr;
+    gap: 1rem;
+    align-items: center;
+    padding: 1rem 1.1rem;
+    border-radius: 22px;
+    border: 1px solid var(--border);
+    background: rgba(255, 252, 245, 0.94);
+}
+
+.top-summary-copy strong,
+.top-summary-copy span {
+    display: block;
+}
+
+.top-summary-copy span {
+    margin-top: 0.35rem;
+    color: var(--muted);
+    font-size: 0.92rem;
+}
+
+.top-summary-metrics {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
 }
 
 #hammyviz-formula {
@@ -207,6 +271,16 @@ button {
 
 .comparison-grid {
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+}
+
+#comparison-panel .highlight-grid {
+    margin-top: 0;
+}
+
+#comparison-panel .comparison-grid {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
 }
 
 .compare-summary {
@@ -339,6 +413,12 @@ button {
     color: var(--muted);
 }
 
+.compare-panel,
+.rankings-panel {
+    background:
+        linear-gradient(180deg, rgba(255, 252, 245, 0.98), rgba(250, 245, 235, 0.96));
+}
+
 .compare-positive {
     color: var(--accent-strong);
     font-weight: 700;
@@ -388,5 +468,13 @@ button {
 
     .hammyviz-row {
         grid-template-columns: 1fr;
+    }
+
+    .top-summary-row {
+        grid-template-columns: 1fr;
+    }
+
+    .top-summary-metrics {
+        justify-content: flex-start;
     }
 }

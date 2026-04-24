@@ -332,6 +332,32 @@ public sealed class SqliteStatsCacheRepository : IStatsCacheRepository
         await transaction.CommitAsync(cancellationToken);
     }
 
+    public async Task ResetAllAsync(CancellationToken cancellationToken)
+    {
+        await using var connection = await OpenConnectionAsync(cancellationToken);
+        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken);
+
+        foreach (var statement in new[]
+        {
+            "DELETE FROM leaderboard_snapshots;",
+            "DELETE FROM profile_cache;",
+            "DELETE FROM url_cache;",
+            "DELETE FROM players;"
+        })
+        {
+            await using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = statement;
+            await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+
+        await transaction.CommitAsync(cancellationToken);
+
+        await using var vacuumCommand = connection.CreateCommand();
+        vacuumCommand.CommandText = "VACUUM;";
+        await vacuumCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
     private void EnsureSchema()
     {
         using var connection = new SqliteConnection(_connectionString);

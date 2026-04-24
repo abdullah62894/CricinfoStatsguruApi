@@ -1,5 +1,6 @@
 using CricinfoStatsguruApi.Options;
 using Microsoft.Extensions.Options;
+using System.Text.RegularExpressions;
 
 namespace CricinfoStatsguruApi.Services;
 
@@ -41,16 +42,17 @@ public sealed class StatsguruClient(
 
                 response.EnsureSuccessStatusCode();
                 var html = await response.Content.ReadAsStringAsync(cancellationToken);
+                var simplifiedHtml = SimplifyHtml(html);
 
                 var fetchedUtc = DateTimeOffset.UtcNow;
                 await _cacheRepository.SaveUrlAsync(
                     url,
-                    html,
+                    simplifiedHtml,
                     fetchedUtc,
                     fetchedUtc.AddHours(_cacheOptions.UrlCacheHours),
                     cancellationToken);
 
-                return html;
+                return simplifiedHtml;
             }
             catch (HttpRequestException) when (i < maxRetries)
             {
@@ -59,5 +61,23 @@ public sealed class StatsguruClient(
         }
 
         throw new HttpRequestException("Failed to fetch Statsguru data after retries.");
+    }
+
+    private static string SimplifyHtml(string html)
+    {
+        if (string.IsNullOrWhiteSpace(html))
+        {
+            return string.Empty;
+        }
+
+        var bodyMatch = Regex.Match(html, "<body\\b[^>]*>(?<body>.*?)</body>", RegexOptions.IgnoreCase | RegexOptions.Singleline);
+        var simplified = bodyMatch.Success ? bodyMatch.Groups["body"].Value : html;
+
+        simplified = Regex.Replace(simplified, "<!--.*?-->", string.Empty, RegexOptions.Singleline);
+        simplified = Regex.Replace(simplified, "<(script|style|noscript|svg|iframe|object)\\b.*?</\\1>", string.Empty, RegexOptions.IgnoreCase | RegexOptions.Singleline);
+        simplified = Regex.Replace(simplified, "<(img|meta|link)\\b[^>]*>", string.Empty, RegexOptions.IgnoreCase | RegexOptions.Singleline);
+        simplified = Regex.Replace(simplified, "\\s+", " ");
+
+        return simplified.Trim();
     }
 }

@@ -31,7 +31,15 @@ builder.Services.AddHttpClient<IStatsguruClient, StatsguruClient>((serviceProvid
 var app = builder.Build();
 
 app.UseDefaultFiles();
-app.UseStaticFiles();
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = context =>
+    {
+        context.Context.Response.Headers.CacheControl = "no-store, no-cache, must-revalidate";
+        context.Context.Response.Headers.Pragma = "no-cache";
+        context.Context.Response.Headers.Expires = "0";
+    }
+});
 
 app.UseSwagger();
 app.UseSwaggerUI(options =>
@@ -81,6 +89,51 @@ app.MapPost("/cache/preload", async (
             new
             {
                 error = "Unable to fetch Statsguru data",
+                detail = exception.Message
+            },
+            statusCode: StatusCodes.Status502BadGateway);
+    }
+});
+
+app.MapPost("/cache/reset", async (
+    IStatsCacheRepository cacheRepository,
+    IPlayerLookupCache playerLookupCache,
+    CancellationToken cancellationToken) =>
+{
+    await cacheRepository.ResetAllAsync(cancellationToken);
+    await playerLookupCache.ClearAsync(cancellationToken);
+
+    return Results.Ok(new
+    {
+        message = "All SQLite and player lookup caches were cleared."
+    });
+});
+
+app.MapPost("/cache/refresh", async (
+    string templateKey,
+    int? limit,
+    ICacheWarmupService cacheWarmupService,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var result = await cacheWarmupService.WarmLeaderboardAsync(templateKey, limit ?? 100, cancellationToken);
+        return Results.Ok(result);
+    }
+    catch (KeyNotFoundException exception)
+    {
+        return Results.NotFound(new { error = exception.Message });
+    }
+    catch (ArgumentOutOfRangeException exception)
+    {
+        return Results.BadRequest(new { error = exception.Message });
+    }
+    catch (HttpRequestException exception)
+    {
+        return Results.Json(
+            new
+            {
+                error = "Unable to refresh cache from Statsguru data",
                 detail = exception.Message
             },
             statusCode: StatusCodes.Status502BadGateway);

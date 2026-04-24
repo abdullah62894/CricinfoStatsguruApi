@@ -13,6 +13,7 @@ const notesPanel = document.getElementById("notes-panel");
 const profileTitle = document.getElementById("profile-title");
 const profileSubtitle = document.getElementById("profile-subtitle");
 const rawApiLink = document.getElementById("raw-api-link");
+const topSummaryRows = document.getElementById("top-summary-rows");
 const highlightGrid = document.getElementById("highlight-grid");
 const comparisonGrid = document.getElementById("comparison-grid");
 const notesList = document.getElementById("notes-list");
@@ -45,6 +46,8 @@ const rankingsResults = document.getElementById("rankings-results");
 const exportRankingsButton = document.getElementById("exportRankingsButton");
 const top10Button = document.getElementById("top10Button");
 const top20Button = document.getElementById("top20Button");
+const refreshCacheButton = document.getElementById("refreshCacheButton");
+const resetCacheButton = document.getElementById("resetCacheButton");
 
 let lastSearchFingerprint = "";
 let currentCandidates = [];
@@ -66,6 +69,13 @@ const hammyVizKeys = [
     "toughest-hosts-top7",
     "player-toughest-hosts"
 ];
+
+const hostGroupLabels = {
+    SENA: "SENA",
+    SENAI: "SENAI",
+    SWENA: "SWENA",
+    ASIA: "ASIA"
+};
 
 const formatMetric = (value) => {
     if (value === null || value === undefined) {
@@ -100,6 +110,8 @@ const getHighlightOrder = (profile) => {
             "player-sena",
             "own-team-sena",
             "opposition-sena",
+            "toughest-hosts-top7",
+            "player-toughest-hosts",
             "player-vs-pace",
             "player-vs-spin"
         ];
@@ -168,6 +180,34 @@ const renderHighlights = (profile) => {
 
         card.append(title, renderMetrics(item.metrics, profile.discipline, profile.format, item.key), scope);
         highlightGrid.appendChild(card);
+    });
+};
+
+const renderTopSummaryRows = (profile) => {
+    topSummaryRows.innerHTML = "";
+
+    const comparisonMap = new Map(profile.comparisons.map((item) => [item.key, item]));
+    const rows = getHighlightOrder(profile)
+        .map((key) => comparisonMap.get(key))
+        .filter((item) => item)
+        .slice(0, 2);
+
+    rows.forEach((item) => {
+        const row = document.createElement("article");
+        row.className = "top-summary-row";
+        row.innerHTML = `
+            <div class="top-summary-copy">
+                <strong>${item.label}</strong>
+                <span>${item.scope}</span>
+            </div>
+            <div class="top-summary-metrics">
+                <div class="metric-pill"><strong>${formatMetric(item.metrics.average)}</strong><span>Average</span></div>
+                <div class="metric-pill"><strong>${formatMetric(item.metrics.baselineAverage)}</strong><span>Baseline avg</span></div>
+                <div class="metric-pill"><strong>${formatMetric(item.metrics.averageDeltaPercent)}</strong><span>Diff %</span></div>
+                <div class="metric-pill"><strong>${formatMetric(item.metrics.hammyVizContribution)}</strong><span>HammyViz pts</span></div>
+            </div>
+        `;
+        topSummaryRows.appendChild(row);
     });
 };
 
@@ -357,6 +397,7 @@ const hideResults = () => {
     hammyvizPanel.classList.add("hidden");
     comparisonPanel.classList.add("hidden");
     notesPanel.classList.add("hidden");
+    topSummaryRows.innerHTML = "";
 };
 
 const resetPlayerSelection = () => {
@@ -638,7 +679,7 @@ const renderRankingsResults = (data) => {
 
     const tbody = table.querySelector("tbody");
     const hostGroupSelect = document.getElementById("rankingsHostGroup");
-    const hostGroupName = hostGroupSelect?.value || "SENA";
+    const hostGroupName = hostGroupLabels[hostGroupSelect?.value || "SENA"] || "SENA";
     const isBowling = data.discipline.toLowerCase() === "bowling";
 
     if (isBowling) {
@@ -675,7 +716,7 @@ const renderRankingsResults = (data) => {
     rankingsResults.classList.remove("hidden");
 
     const csvRows = [
-        ["Rank", "Player", "HammyViz", "RawAverage", "OverallDelta", "PaceDelta", "SpinDelta", "Top7Delta", "SenaDelta", "Top5HostsDelta"],
+        ["Rank", "Player", "HammyViz", "RawAverage", "OverallDelta", "PaceDelta", "SpinDelta", "Top7Delta", "HostGroupDelta", "Top5HostsDelta", "ToughestTop7Delta"],
         ...data.rows.map((row) => [
             row.rank,
             row.playerName,
@@ -686,7 +727,8 @@ const renderRankingsResults = (data) => {
             row.spinDelta,
             row.top7Delta,
             row.senaDelta,
-            row.toughestHostsDelta
+            row.toughestHostsDelta,
+            row.toughestHostsTop7Delta
         ])
     ];
 
@@ -756,8 +798,8 @@ const loadProfile = async () => {
         profileTitle.textContent = data.matchedPlayerName;
         profileSubtitle.textContent = `${data.templateLabel} | ${data.format} | ${data.discipline}${data.teamName ? ` | ${data.teamName}` : ""}${data.hammyVizScore !== null && data.hammyVizScore !== undefined ? ` | HammyViz ${formatMetric(data.hammyVizScore)}` : ""}`;
 
+        renderTopSummaryRows(data);
         renderHighlights(data);
-        renderHammyVizSummary(highlightGrid, data);
         renderHammyVizBreakdown(data);
         renderComparisons(data);
         renderNotes(data);
@@ -927,6 +969,62 @@ top20Button.addEventListener("click", () => {
     rankingsLimitInput.value = "20";
     rankingsForm.requestSubmit();
 });
+
+const refreshCache = async () => {
+    refreshCacheButton.disabled = true;
+    refreshCacheButton.textContent = "Refreshing...";
+    clearError();
+
+    try {
+        const params = new URLSearchParams({
+            templateKey: rankingsTemplateSelect.value || templateSelect.value || "test-batting-profile",
+            limit: "100"
+        });
+        const response = await fetch(`/cache/refresh?${params.toString()}`, { method: "POST" });
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || "Unable to refresh cache.");
+        }
+
+        statusText.textContent = `Refreshed ${data.snapshotSize} leaderboard rows for ${data.templateKey}. Updated ${data.refreshedProfiles} player profiles.`;
+    } catch (error) {
+        showError(error.message || "Unable to refresh cache.");
+    } finally {
+        refreshCacheButton.disabled = false;
+        refreshCacheButton.textContent = "Refresh cache";
+    }
+};
+
+const resetCache = async () => {
+    resetCacheButton.disabled = true;
+    resetCacheButton.textContent = "Resetting...";
+    clearError();
+
+    try {
+        const response = await fetch("/cache/reset", { method: "POST" });
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || "Unable to reset cache.");
+        }
+
+        latestRankings = null;
+        rankingsResults.classList.add("hidden");
+        compareSummary.classList.add("hidden");
+        compareResults.classList.add("hidden");
+        hideResults();
+        statusText.textContent = data.message || "Cache reset complete.";
+    } catch (error) {
+        showError(error.message || "Unable to reset cache.");
+    } finally {
+        resetCacheButton.disabled = false;
+        resetCacheButton.textContent = "Reset DB cache";
+    }
+};
+
+refreshCacheButton?.addEventListener("click", refreshCache);
+resetCacheButton?.addEventListener("click", resetCache);
 
 [comparePlayerANameInput, comparePlayerBNameInput]
     .forEach((element, index) => {

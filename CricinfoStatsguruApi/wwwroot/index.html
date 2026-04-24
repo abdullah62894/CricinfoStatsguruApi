@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Cricinfo Player Profiles</title>
-    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="/styles.css?v=20260424c">
 </head>
 <body>
     <main class="page-shell">
@@ -49,11 +49,16 @@
                         <option value="SENA">SENA (AUS, ENG, NZ, SA)</option>
                         <option value="SENAI">SENAI (+ India)</option>
                         <option value="SWENA">SWENA (+ West Indies)</option>
+                        <option value="ASIA">Asia (IND, PAK, SL, UAE, BAN)</option>
                     </select>
                 </label>
 
                 <button type="submit" id="submitButton">Load profile</button>
             </form>
+            <div class="cache-actions">
+                <button type="button" id="refreshCacheButton" class="secondary-button">Refresh cache</button>
+                <button type="button" id="resetCacheButton" class="secondary-button danger-button">Reset DB cache</button>
+            </div>
             <p id="form-status" class="form-status">Loading templates...</p>
             <div id="player-picker-panel" class="player-picker hidden">
                 <label>
@@ -69,7 +74,7 @@
         <section id="summary-panel" class="panel summary-panel hidden">
             <div class="summary-header">
                 <div>
-                    <p class="eyebrow">Profile snapshot</p>
+                    <p class="eyebrow">HammyViz report</p>
                     <h2 id="profile-title">Player Profile</h2>
                     <p id="profile-subtitle" class="profile-subtitle"></p>
                 </div>
@@ -77,7 +82,7 @@
                     <a id="raw-api-link" href="#" target="_blank" rel="noreferrer">Open JSON</a>
                 </div>
             </div>
-            <div id="highlight-grid" class="highlight-grid"></div>
+            <div id="top-summary-rows" class="top-summary-rows"></div>
         </section>
 
         <section id="hammyviz-panel" class="panel hidden">
@@ -92,9 +97,10 @@
 
         <section id="comparison-panel" class="panel hidden">
             <div class="section-heading">
-                <p class="eyebrow">Comparison blocks</p>
-                <h2>Detailed profile cards</h2>
+                <p class="eyebrow">Detailed cards</p>
+                <h2>Featured blocks first, then full profile cards</h2>
             </div>
+            <div id="highlight-grid" class="highlight-grid"></div>
             <div id="comparison-grid" class="comparison-grid"></div>
         </section>
 
@@ -145,6 +151,7 @@
                         <option value="SENA">SENA (AUS, ENG, NZ, SA)</option>
                         <option value="SENAI">SENAI (+ India)</option>
                         <option value="SWENA">SWENA (+ West Indies)</option>
+                        <option value="ASIA">Asia (IND, PAK, SL, UAE, BAN)</option>
                     </select>
                 </label>
 
@@ -198,6 +205,7 @@
                         <option value="SENA">SENA</option>
                         <option value="SENAI">SENAI</option>
                         <option value="SWENA">SWENA</option>
+                        <option value="ASIA">ASIA</option>
                     </select>
                 </label>
 
@@ -225,6 +233,6 @@
         </section>
     </main>
 
-    <script src="/app.js" defer></script>
+    <script src="/app.js?v=20260424c" defer></script>
 </body>
 </html>

@@ -17,8 +17,9 @@ public sealed class StatsService(
     private static readonly int[] SenaHostIds = [2, 1, 5, 3];
     private static readonly int[] SenaiHostIds = [2, 1, 5, 3, 6];
     private static readonly int[] SwenaHostIds = [2, 1, 5, 3, 4];
+    private static readonly int[] AsiaHostIds = [6, 7, 8, 27, 25];
 
-    private const string ProfileCacheVersion = "v7";
+    private const string ProfileCacheVersion = "v8";
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     private readonly IFilterTemplateRepository _templateRepository = templateRepository;
@@ -166,10 +167,7 @@ public sealed class StatsService(
             }
         }
 
-        if (IsBattingTemplate(template))
-        {
-            await AddToughestHostComparisonsAsync(comparisons, template, query, resolvedPlayer, cancellationToken);
-        }
+        await AddToughestHostComparisonsAsync(comparisons, template, query, resolvedPlayer, cancellationToken);
 
         comparisons = ApplyHammyVizScoring(comparisons);
         notes.Add("These profile metrics are built from live Statsguru result tables and compare the player against the filtered baseline. Own-team style baselines subtract the player's filtered stats before calculating the baseline average.");
@@ -375,6 +373,7 @@ public sealed class StatsService(
         var groupName = (query.HostGroup ?? "SENA").ToUpperInvariant();
         var hostIds = groupName switch
         {
+            "ASIA" => AsiaHostIds,
             "SENAI" => SenaiHostIds,
             "SWENA" => SwenaHostIds,
             _ => SenaHostIds
@@ -400,7 +399,7 @@ public sealed class StatsService(
             new List<QueryFilter>
             {
                 new() { Key = "groupby", Value = "host" },
-                new() { Key = "orderby", Value = "batting_average" },
+                new() { Key = "orderby", Value = GetHostRankingOrderBy(template) },
                 new() { Key = "orderbyad", Value = "reverse" },
                 new() { Key = "size", Value = "100" }
             };
@@ -422,20 +421,32 @@ public sealed class StatsService(
             .ToList();
 
         var toughestScenario = await FetchScenarioAsync(template, query, resolvedPlayer.PlayerId, multiHostFilters, cancellationToken);
+        var toughestTop7Filters = new List<QueryFilter>(multiHostFilters);
+        toughestTop7Filters.AddRange(
+        [
+            new QueryFilter { Key = "batting_positionval1", Value = "batting_position" },
+            new QueryFilter { Key = "batting_positionmin1", Value = "1" },
+            new QueryFilter { Key = "batting_positionmax1", Value = "7" }
+        ]);
+
+        if (IsBowlingTemplate(template) && !string.IsNullOrWhiteSpace(query.BowlerType))
+        {
+            toughestTop7Filters.Add(new QueryFilter { Key = "bowling_pacespin", Value = query.BowlerType });
+        }
+
         var toughestTop7Scenario = await FetchScenarioAsync(
             template,
             query,
             resolvedPlayer.PlayerId,
-            [
-                .. multiHostFilters,
-                new QueryFilter { Key = "batting_positionval1", Value = "batting_position" },
-                new QueryFilter { Key = "batting_positionmin1", Value = "1" },
-                new QueryFilter { Key = "batting_positionmax1", Value = "7" }
-            ],
+            toughestTop7Filters,
             cancellationToken);
 
+        var top7Scope = IsBowlingTemplate(template)
+            ? "Player bowling average versus top-7 batting baseline in the toughest host countries"
+            : "Player average versus top-7 batting baseline in the toughest host countries";
+
         comparisons.Add(BuildComparison("player-toughest-hosts", "Player in toughest 5 hosts", "Player average versus the toughest host-country pool excluding the player", template, resolvedPlayer, toughestScenario, toughestScenario, excludePlayerFromBaseline: true));
-        comparisons.Add(BuildComparison("toughest-hosts-top7", "Top 7 in toughest hosts", "Player average versus top-7 batting baseline in the toughest host countries", template, resolvedPlayer, toughestScenario, toughestTop7Scenario, excludePlayerFromBaseline: false));
+        comparisons.Add(BuildComparison("toughest-hosts-top7", "Top 7 in toughest hosts", top7Scope, template, resolvedPlayer, toughestScenario, toughestTop7Scenario, excludePlayerFromBaseline: false));
     }
 
     private FilterTemplate GetTemplate(string templateKey) =>
@@ -709,6 +720,9 @@ public sealed class StatsService(
 
     private static bool IsBattingTemplate(FilterTemplate template) =>
         string.Equals(template.Discipline, "Batting", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsBowlingTemplate(FilterTemplate template) =>
+        string.Equals(template.Discipline, "Bowling", StringComparison.OrdinalIgnoreCase);
 
     private static bool IsTestTemplate(FilterTemplate template) =>
         string.Equals(template.Format, "Test", StringComparison.OrdinalIgnoreCase);
@@ -1118,11 +1132,14 @@ public sealed class StatsService(
         return $"Each HammyViz block carries {weight.Value:0.##} points out of 100. Block points = weight x clamp((diff% + 100) / 200, 0, 1). Total HammyViz = sum of all block points.";
     }
 
+    private static string GetHostRankingOrderBy(FilterTemplate template) =>
+        IsBowlingTemplate(template) ? "bowling_average" : "batting_average";
+
     private static IEnumerable<int> ExtractHostIdsFromGroupedHtml(string html)
     {
         var matches = System.Text.RegularExpressions.Regex.Matches(
             html,
-            @"groupby=host;host=(?<id>\d+);orderby=batting_average",
+            @"groupby=host;host=(?<id>\d+);orderby=[^;""]+",
             System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
         foreach (System.Text.RegularExpressions.Match match in matches)
