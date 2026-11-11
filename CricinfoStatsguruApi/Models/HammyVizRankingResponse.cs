@@ -12,5 +12,7 @@ public sealed class HammyVizRankingResponse
 
     public required int Limit { get; init; }
 
+    public string? SourceUrl { get; init; }
+
     public required IReadOnlyList<HammyVizRankingRow> Rows { get; init; }
 }

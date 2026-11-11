@@ -4,6 +4,10 @@ public sealed class HammyVizRankingRow
 {
     public required int Rank { get; init; }
 
+    public required int SourceRank { get; init; }
+
+    public required int SourceTotal { get; init; }
+
     public required int PlayerId { get; init; }
 
     public required string PlayerName { get; init; }

@@ -160,6 +160,10 @@ const renderMetrics = (metrics, discipline, format, comparisonKey) => {
 };
 
 const renderHighlights = (profile) => {
+    if (!highlightGrid) {
+        return;
+    }
+
     highlightGrid.innerHTML = "";
 
     const comparisonMap = new Map(profile.comparisons.map((item) => [item.key, item]));
@@ -662,8 +666,10 @@ const renderRankingsResults = (data) => {
         <thead>
             <tr>
                 <th>Rank</th>
+                <th>Statsguru</th>
                 <th>Player</th>
                 <th>HammyViz</th>
+                <th class="source-total-header">Runs</th>
                 <th>Raw avg</th>
                 <th class="discipline-overall-header">Overall</th>
                 <th class="pacer-only hidden">Pace</th>
@@ -685,6 +691,7 @@ const renderRankingsResults = (data) => {
     if (isBowling) {
         table.querySelectorAll(".pacer-only, .spinner-only").forEach(el => el.classList.remove("hidden"));
         table.querySelector(".discipline-overall-header").textContent = "All bowlers";
+        table.querySelector(".source-total-header").textContent = "Wkts";
     } else {
         table.querySelector(".discipline-overall-header").textContent = "All batters";
     }
@@ -698,8 +705,10 @@ const renderRankingsResults = (data) => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
             <td>${row.rank}</td>
+            <td>${row.sourceRank}</td>
             <td>${row.playerName}</td>
             <td class="${compareClassName(row.hammyVizScore)}">${formatMetric(row.hammyVizScore)}</td>
+            <td>${row.sourceTotal ?? "n/a"}</td>
             <td>${formatMetric(row.rawAverage)}</td>
             <td class="${compareClassName(row.overallDelta)}">${formatMetric(row.overallDelta)}</td>
             <td class="pacer-only hidden ${row.paceDelta === null ? "dimmed" : compareClassName(row.paceDelta)}">${formatMetric(row.paceDelta)}</td>
@@ -716,9 +725,11 @@ const renderRankingsResults = (data) => {
     rankingsResults.classList.remove("hidden");
 
     const csvRows = [
-        ["Rank", "Player", "HammyViz", "RawAverage", "OverallDelta", "PaceDelta", "SpinDelta", "Top7Delta", "HostGroupDelta", "Top5HostsDelta", "ToughestTop7Delta"],
+        ["Rank", "StatsguruRank", "SourceTotal", "Player", "HammyViz", "RawAverage", "OverallDelta", "PaceDelta", "SpinDelta", "Top7Delta", "HostGroupDelta", "Top5HostsDelta", "ToughestTop7Delta"],
         ...data.rows.map((row) => [
             row.rank,
+            row.sourceRank,
+            row.sourceTotal,
             row.playerName,
             row.hammyVizScore,
             row.rawAverage,
@@ -799,7 +810,6 @@ const loadProfile = async () => {
         profileSubtitle.textContent = `${data.templateLabel} | ${data.format} | ${data.discipline}${data.teamName ? ` | ${data.teamName}` : ""}${data.hammyVizScore !== null && data.hammyVizScore !== undefined ? ` | HammyViz ${formatMetric(data.hammyVizScore)}` : ""}`;
 
         renderTopSummaryRows(data);
-        renderHighlights(data);
         renderHammyVizBreakdown(data);
         renderComparisons(data);
         renderNotes(data);
@@ -949,7 +959,7 @@ rankingsForm.addEventListener("submit", async (event) => {
         }
 
         renderRankingsResults(data);
-        rankingsStatus.textContent = `Loaded top ${data.rows.length} players sorted by HammyViz.`;
+        rankingsStatus.textContent = `Loaded ${data.rows.length} players from the current Statsguru top-${limit} leaderboard, sorted by HammyViz.`;
     } catch (error) {
         rankingsResults.classList.add("hidden");
         rankingsStatus.textContent = error.message || "Something went wrong.";

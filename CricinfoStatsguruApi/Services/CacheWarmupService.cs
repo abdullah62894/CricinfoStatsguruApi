@@ -27,25 +27,15 @@ public sealed class CacheWarmupService(
         var template = _templateRepository.GetByKey(templateKey)
             ?? throw new KeyNotFoundException($"Unknown template key '{templateKey}'.");
 
-        var leaderboardQuery = new StatsQuery
-        {
-            PlayerName = string.Empty,
-            TemplateKey = templateKey,
-            ForceRefresh = true
-        };
+        var leaderboardQuery = BuildLeaderboardQuery(templateKey);
         var totalColumn = GetTotalColumn(template);
-        var rows = await FetchLeaderboardRowsAsync(template, leaderboardQuery, totalColumn, limit, cancellationToken);
+        var (rows, _) = await FetchLeaderboardRowsAsync(template, leaderboardQuery, totalColumn, limit, cancellationToken);
 
         var previousSnapshot = await _cacheRepository.TryGetLatestLeaderboardSnapshotAsync(template.Format, template.Discipline, cancellationToken);
-        var previousTotals = previousSnapshot?.Rows.ToDictionary(row => row.PlayerId, row => row.TotalValue)
-            ?? new Dictionary<int, int>();
-
-        var changedRows = rows
-            .Where(row => !previousTotals.TryGetValue(row.PlayerId, out var previousValue) || previousValue != row.TotalValue)
-            .ToList();
+        var changedRows = FindChangedRows(rows, previousSnapshot);
 
         var capturedUtc = DateTimeOffset.UtcNow;
-        var snapshotKey = $"{template.Key}:{capturedUtc:yyyyMMddHHmmss}";
+        var snapshotKey = BuildSnapshotKey(template, capturedUtc);
 
         foreach (var row in rows)
         {
@@ -98,33 +88,50 @@ public sealed class CacheWarmupService(
         var template = _templateRepository.GetByKey(templateKey)
             ?? throw new KeyNotFoundException($"Unknown template key '{templateKey}'.");
 
-        var snapshot = await _cacheRepository.TryGetLatestLeaderboardSnapshotAsync(template.Format, template.Discipline, cancellationToken);
-        if (snapshot is null || snapshot.Rows.Count < limit)
+        var leaderboardQuery = BuildLeaderboardQuery(templateKey);
+        var totalColumn = GetTotalColumn(template);
+        var (leaderboardRows, sourceUrl) = await FetchLeaderboardRowsAsync(template, leaderboardQuery, totalColumn, limit, cancellationToken);
+
+        if (leaderboardRows.Count == 0)
         {
-            await WarmLeaderboardAsync(templateKey, limit, cancellationToken);
-            snapshot = await _cacheRepository.TryGetLatestLeaderboardSnapshotAsync(template.Format, template.Discipline, cancellationToken);
+            throw new InvalidOperationException("Unable to build rankings because no rows were found in the Statsguru leaderboard.");
         }
 
-        if (snapshot is null)
+        var previousSnapshot = await _cacheRepository.TryGetLatestLeaderboardSnapshotAsync(template.Format, template.Discipline, cancellationToken);
+        var changedRows = FindChangedRows(leaderboardRows, previousSnapshot);
+        var changedPlayerIds = changedRows.Select(row => row.PlayerId).ToHashSet();
+        var capturedUtc = DateTimeOffset.UtcNow;
+
+        foreach (var row in leaderboardRows)
         {
-            throw new InvalidOperationException("Unable to build rankings because no leaderboard snapshot is available.");
+            await UpsertLeaderboardPlayerAsync(template, row, capturedUtc, cancellationToken);
         }
 
-        var profiles = new List<PlayerProfileResponse>();
-        foreach (var row in snapshot.Rows.Take(limit))
+        await _cacheRepository.SaveLeaderboardSnapshotAsync(
+            BuildSnapshotKey(template, capturedUtc),
+            template.Format,
+            template.Discipline,
+            leaderboardRows,
+            capturedUtc,
+            cancellationToken);
+
+        var profiles = new List<(LeaderboardSnapshotRow Row, PlayerProfileResponse Profile)>();
+        foreach (var row in leaderboardRows.Take(limit))
         {
             try
             {
+                var forceRefresh = changedPlayerIds.Contains(row.PlayerId);
                 var query = new StatsQuery
                 {
                     PlayerName = row.DisplayName,
                     TemplateKey = template.Key,
                     HostGroup = hostGroup,
-                    BowlerType = bowlerType
+                    BowlerType = bowlerType,
+                    ForceRefresh = forceRefresh
                 };
 
                 var profile = await _statsService.GetPlayerProfileAsync(query, cancellationToken);
-                if (NeedsRankingRefresh(profile))
+                if (!forceRefresh && NeedsRankingRefresh(profile))
                 {
                     profile = await _statsService.GetPlayerProfileAsync(
                         new StatsQuery
@@ -138,7 +145,7 @@ public sealed class CacheWarmupService(
                         cancellationToken);
                 }
 
-                profiles.Add(profile);
+                profiles.Add((row, profile));
             }
             catch (Exception)
             {
@@ -148,22 +155,24 @@ public sealed class CacheWarmupService(
         }
 
         var ranked = profiles
-            .OrderByDescending(profile => profile.HammyVizScore ?? decimal.MinValue)
-            .ThenByDescending(profile => profile.Comparisons.FirstOrDefault(comparison => comparison.Key == "player-overall")?.Metrics.Average ?? decimal.MinValue)
-            .Select((profile, index) => new HammyVizRankingRow
+            .OrderByDescending(item => item.Profile.HammyVizScore ?? decimal.MinValue)
+            .ThenBy(item => item.Row.Rank)
+            .Select((item, index) => new HammyVizRankingRow
             {
                 Rank = index + 1,
-                PlayerId = profile.PlayerId,
-                PlayerName = profile.MatchedPlayerName,
-                HammyVizScore = profile.HammyVizScore,
-                RawAverage = profile.Comparisons.FirstOrDefault(comparison => comparison.Key == "player-overall")?.SubjectMetrics.Average,
-                OverallDelta = FindDelta(profile, "all-involved-overall"),
-                PaceDelta = FindDelta(profile, "player-vs-pace"),
-                SpinDelta = FindDelta(profile, "player-vs-spin"),
-                Top7Delta = FindDelta(profile, "own-team-top7") ?? FindDelta(profile, "opposition-top7"),
-                SenaDelta = FindDelta(profile, "player-sena"),
-                ToughestHostsDelta = FindDelta(profile, "player-toughest-hosts"),
-                ToughestHostsTop7Delta = FindDelta(profile, "toughest-hosts-top7")
+                SourceRank = item.Row.Rank,
+                SourceTotal = item.Row.TotalValue,
+                PlayerId = item.Profile.PlayerId,
+                PlayerName = item.Profile.MatchedPlayerName,
+                HammyVizScore = item.Profile.HammyVizScore,
+                RawAverage = item.Profile.Comparisons.FirstOrDefault(comparison => comparison.Key == "player-overall")?.SubjectMetrics.Average,
+                OverallDelta = FindDelta(item.Profile, "all-involved-overall"),
+                PaceDelta = FindDelta(item.Profile, "player-vs-pace"),
+                SpinDelta = FindDelta(item.Profile, "player-vs-spin"),
+                Top7Delta = FindDelta(item.Profile, "own-team-top7") ?? FindDelta(item.Profile, "opposition-top7"),
+                SenaDelta = FindDelta(item.Profile, "player-sena"),
+                ToughestHostsDelta = FindDelta(item.Profile, "player-toughest-hosts"),
+                ToughestHostsTop7Delta = FindDelta(item.Profile, "toughest-hosts-top7")
             })
             .Take(limit)
             .ToList();
@@ -175,6 +184,7 @@ public sealed class CacheWarmupService(
             Format = template.Format,
             Discipline = template.Discipline,
             Limit = limit,
+            SourceUrl = sourceUrl,
             Rows = ranked
         };
     }
@@ -207,7 +217,7 @@ public sealed class CacheWarmupService(
             cancellationToken);
     }
 
-    private async Task<List<LeaderboardSnapshotRow>> FetchLeaderboardRowsAsync(
+    private async Task<(List<LeaderboardSnapshotRow> Rows, string SourceUrl)> FetchLeaderboardRowsAsync(
         FilterTemplate template,
         StatsQuery leaderboardQuery,
         string totalColumn,
@@ -225,12 +235,14 @@ public sealed class CacheWarmupService(
         var leaderboardHtml = await _client.GetHtmlAsync(requestContext.OverallUrl, cancellationToken, bypassCache: true);
         var leaderboardTable = _parser.Parse(leaderboardHtml);
 
-        return leaderboardTable.Rows
+        var rows = leaderboardTable.Rows
             .Select((row, index) => BuildSnapshotRow(row, index + 1, totalColumn))
             .Where(row => row is not null)
             .Cast<LeaderboardSnapshotRow>()
             .Take(limit)
             .ToList();
+
+        return (rows, requestContext.OverallUrl);
     }
 
     private static LeaderboardSnapshotRow? BuildSnapshotRow(IReadOnlyDictionary<string, string> row, int rank, string totalColumn)
@@ -269,6 +281,29 @@ public sealed class CacheWarmupService(
         string.Equals(template.Discipline, "Batting", StringComparison.OrdinalIgnoreCase)
             ? "Runs"
             : "Wkts";
+
+    private static StatsQuery BuildLeaderboardQuery(string templateKey) =>
+        new()
+        {
+            PlayerName = string.Empty,
+            TemplateKey = templateKey,
+            ForceRefresh = true
+        };
+
+    private static string BuildSnapshotKey(FilterTemplate template, DateTimeOffset capturedUtc) =>
+        $"{template.Key}:{capturedUtc:yyyyMMddHHmmssfff}";
+
+    private static List<LeaderboardSnapshotRow> FindChangedRows(
+        IReadOnlyList<LeaderboardSnapshotRow> rows,
+        LeaderboardSnapshotMetadata? previousSnapshot)
+    {
+        var previousTotals = previousSnapshot?.Rows.ToDictionary(row => row.PlayerId, row => row.TotalValue)
+            ?? new Dictionary<int, int>();
+
+        return rows
+            .Where(row => !previousTotals.TryGetValue(row.PlayerId, out var previousValue) || previousValue != row.TotalValue)
+            .ToList();
+    }
 
     private static int? ResolveRuns(FilterTemplate template, PlayerCacheRecord? existing, LeaderboardSnapshotRow row) =>
         string.Equals(template.Key, "test-batting-profile", StringComparison.OrdinalIgnoreCase)
